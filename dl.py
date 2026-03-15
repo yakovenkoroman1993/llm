@@ -4,12 +4,12 @@ import torch
 from torch import Tensor
 from torch.utils.data import Dataset
 
-# Typed torch DataLoader
+# Типизированный torch DataLoader
 class DataLoader(torch.utils.data.DataLoader[tuple[Tensor, Tensor]]):
   def __iter__(self) -> Iterator[tuple[Tensor, Tensor]]:
     return super().__iter__()
 
-# Tokenization + Sliding Window in tensors
+# Токенизация и Реализация плавающего окна (входные данные - цель)
 class SlidingWindow(Dataset[tuple[Tensor, Tensor]]):
   def __init__(
       self, 

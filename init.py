@@ -1,5 +1,7 @@
 from importlib.metadata import version
 import dl
+import self_attention
+import causal_attention
 import torch
 from torch import Tensor
 from typing import Iterator
@@ -43,12 +45,41 @@ position_embedding_layer = torch.nn.Embedding(context_length, output_dim)
 position_embeddings: Tensor = position_embedding_layer(torch.arange(context_length))
 
 # 3.3 Получим Входные вложения из суммы: Вложения токенов и Позиционные Вложения
-print(token_embeddings)
-print("SHAPE", token_embeddings.shape)
-print(position_embeddings)
-print("SHAPE", position_embeddings.shape)
 input_embeddings = token_embeddings + position_embeddings
-print(input_embeddings)
-print("SHAPE", input_embeddings.shape)
  
+# Глава 3. Самовнимание или получение контекстных векторов для каждого токена
+# 4.0
+
+inputs = input_embeddings[0]
+inputs = torch.tensor(
+  [
+    [0.43, 0.15, 0.89], # Your (x1)
+    [0.55, 0.87, 0.66], # journey (x2)
+    [0.57, 0.85, 0.64], # starts (x3)
+    [0.22, 0.58, 0.33], # with (x4)
+    [0.77, 0.25, 0.10], # one (x5)
+    [0.05, 0.80, 0.55], # step (x6)
+  ]
+)
+
+inputs_context = self_attention.gen_inputs_context(inputs)
+
+torch.manual_seed(789)
+sa_v1 = self_attention.SelfAttention_v1(inputs.shape[1], 2)
+torch.manual_seed(789)
+sa_v2 = self_attention.SelfAttention_v2(inputs.shape[1], 2)
+
+batch = torch.stack((inputs, inputs), dim=0)
+
+ca = causal_attention.CausalAttention(
+  d_in=batch.shape[2],
+  d_out=2, 
+  context_length=batch.shape[1],
+  dropout=0.0
+)
+
+batch_context = ca(batch)
+print(batch_context)
+print(batch_context.shape)
+
 print("End")
