@@ -2,8 +2,8 @@ import torch
 from torch import Tensor
 
 # softmax(2D x 2D.T) х 2D
-def gen_inputs_context(inputs: Tensor):
-  return torch.softmax(inputs @ inputs.T, dim=-1) @ inputs
+def gen_inputs_context(x: Tensor):
+  return torch.softmax(x @ x.T, dim=-1) @ x
   """ 
   Полная реализация по шагам:
   contexts = torch.empty(inputs.shape)
@@ -37,10 +37,10 @@ class SelfAttention_v1(torch.nn.Module):
     self.W_key = torch.nn.Parameter(torch.rand(d_in, d_out))
     self.W_value = torch.nn.Parameter(torch.rand(d_in, d_out))
 
-  def forward(self, inputs: Tensor):
-    queries = inputs @ self.W_query # Q
-    keys = inputs @ self.W_key      # K
-    values = inputs @ self.W_value  # V
+  def forward(self, x: Tensor):
+    queries = x @ self.W_query # Q
+    keys = x @ self.W_key      # K
+    values = x @ self.W_value  # V
     attention_scores = queries @ keys.T
 
     # масштабированние скалярного произведения чтобы избежать нулевых градиентов
@@ -59,10 +59,10 @@ class SelfAttention_v2(torch.nn.Module):
     # self.W_value = torch.nn.Linear(d_in, d_out, bias).weight.T
     self.W_value = torch.nn.Linear(d_in, d_out, bias)
 
-  def forward(self, inputs: Tensor):
-    queries = self.W_query(inputs) # Q
-    keys = self.W_key(inputs)      # K
-    values = self.W_value(inputs)  # V
+  def forward(self, x: Tensor):
+    queries = self.W_query(x) # Q
+    keys = self.W_key(x)      # K
+    values = self.W_value(x)  # V
     attention_scores = queries @ keys.T
 
     # масштабированние скалярного произведения чтобы избежать нулевых градиентов
@@ -70,3 +70,4 @@ class SelfAttention_v2(torch.nn.Module):
     print("ATTENTION WEIGHTS", attention_weights)
     
     return attention_weights @ values
+
