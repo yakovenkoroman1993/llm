@@ -21,8 +21,8 @@ class CausalAttention(torch.nn.Module):
       torch.triu(torch.ones(context_length, context_length), diagonal=1)
     )
   
-  def __call__(self, batch: Tensor) -> Tensor:
-    return super().__call__(batch)
+  def __call__(self, x: Tensor) -> Tensor:
+    return super().__call__(x)
 
   def forward(self, x: Tensor):
     batch_size, num_tokens, d_in = x.shape

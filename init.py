@@ -1,12 +1,11 @@
-from importlib.metadata import version
+import tiktoken
 import dl
 from self_attention import SelfAttention_v1, SelfAttention_v2
 from causal_attention import CausalAttention, MutliHeadAttention, MutliHeadAttention_v2
 import torch
 from torch import Tensor
-from typing import Iterator
-
-print("tiktoken version:", version("tiktoken"))
+import gpt
+from gpt import GptModelConfig
 
 with open("the-verdict.txt", "r", encoding="utf-8") as f:
   raw_text = f.read()
@@ -27,23 +26,25 @@ inputs, targets = next(data_iter)
 # 2.0 Создаем нейронный слой Вложения токенов (веса случайные)
 vocab_size = 50257  # токенизатора BPE vocab size
 # output_dim = 256    # vector dimension
-output_dim = 1024    # как у GPT-2
+output_dim = 768    # как у GPT-2
 
 torch.manual_seed(123) # постоянная детерминированность. Удобно для отладки
 
-token_embedding_layer = torch.nn.Embedding(vocab_size, output_dim)
+token_embedding_layer = torch.nn.Embedding(
+  num_embeddings=vocab_size,
+  embedding_dim=output_dim
+)
 
 # 2.1 Получаем Вложения токенов: каждый токен представляется как вектор из слоя Вложения, взятый по индексу
 token_embeddings: Tensor = token_embedding_layer(inputs)
 
 # 2.2 Создаем нейронный слой Позиционные Вложения
-context_length = max_length
+context_length = max_length # 4
 positions: Tensor = torch.arange(context_length)
 
 # 2.3 Получаем Позиционные Вложения
 position_embedding_layer = torch.nn.Embedding(context_length, output_dim)
 position_embeddings: Tensor = position_embedding_layer(torch.arange(context_length))
-
 # 3.3 Получим Входные вложения из суммы: Вложения токенов и Позиционные Вложения
 input_embeddings = token_embeddings + position_embeddings
  
@@ -51,6 +52,8 @@ input_embeddings = token_embeddings + position_embeddings
 # 4.0
 
 inputs = input_embeddings[0]
+
+###
 
 # inputs = torch.tensor(
 #   [
@@ -109,4 +112,32 @@ mha = MutliHeadAttention_v2(
 )
 
 context_vecs = mha(batch)
-print(context_vecs)
+
+#### 
+
+tokenizer = tiktoken.get_encoding("gpt2")
+batch = []
+txt1 = "Every effort moves you"
+txt2 = "Every day holds a"
+batch.append(torch.tensor(tokenizer.encode(txt1)))
+batch.append(torch.tensor(tokenizer.encode(txt2)))
+batch = torch.stack(batch, dim=0)
+
+torch.manual_seed(123)
+
+GPT_CONFIG_124M = GptModelConfig(
+  vocab_size=50257,
+  context_length=1024,
+  embedding_dim=768,
+  num_heads=12,
+  num_layers=12,
+  drop_rate=0.1,
+  qkv_bias=False
+)
+
+llm = gpt.DummyGptModel(GPT_CONFIG_124M)
+
+logits = llm(batch)
+
+# print(logits)
+# print(logits.shape)
