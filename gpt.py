@@ -1,19 +1,12 @@
 import torch
 from torch import Tensor
-from dataclasses import dataclass
 
-@dataclass
-class GptModelConfig:
-  vocab_size: int       # относится к словарю из 50 257 слов, используемому токенизатором BPE
-  context_length: int   # максимальное количество входных токенов
-  embedding_dim: int    # размерность вложения, преобразующего каждый токен в вектор размерностью 768 элементов
-  num_heads: int        # количество целей в механизме многоцелевого внимания
-  num_layers: int       # количество блоков трансформера в модели
-  drop_rate: float      # интенсивность механизма отсева для предотвращения переобучения 
-  qkv_bias: bool        # определяет, следует ли добавлять вектор смещения в слои Linear многоцелевого внимания для вычисления запроса, ключа и значения.
+from cfg import GptModelConfig
+from norm import LinearNorm
+from transformer import Transformer
 
 
-class DummyGptModel(torch.nn.Module):
+class GptModel(torch.nn.Module):
   def __init__(self, cfg: GptModelConfig):
     super().__init__()
 
@@ -31,17 +24,18 @@ class DummyGptModel(torch.nn.Module):
 
     self.transformer_blocks = torch.nn.Sequential(
       *[
-        DummyTransformerBlock(cfg)
+        Transformer(cfg)
         for _ in range(cfg.num_layers)
       ]
     )
 
-    self.final_norm = DummyLayerNorm(cfg.embedding_dim)
+    self.final_norm = LinearNorm(cfg.embedding_dim)
 
     self.out_head = torch.nn.Linear(
       in_features=cfg.embedding_dim,
       out_features=cfg.vocab_size,
-      bias=cfg.qkv_bias # False
+      bias=cfg.qkv_bias # 
+      # bias=False
     )
 
   def __call__(self, x: Tensor) -> Tensor:
@@ -51,6 +45,7 @@ class DummyGptModel(torch.nn.Module):
     batch_size, seq_len = in_idx.shape
 
     token_embeddings: Tensor = self.token_embedding(in_idx)
+
     position_embeddings: Tensor = self.position_embedding(
       torch.arange(seq_len, device=in_idx.device)
     )
@@ -58,27 +53,39 @@ class DummyGptModel(torch.nn.Module):
     x = token_embeddings + position_embeddings
     x = self.drop_embedding(x)
     x = self.transformer_blocks(x)
+    x = self.final_norm(x)
+
     logits: Tensor = self.out_head(x)
 
     return logits
 
-
-class DummyTransformerBlock(torch.nn.Module):
-  def __init__(self, cfg: GptModelConfig):
-    super().__init__()
-
-  def forward(self, x: Tensor):
-    return x
   
+def print_num_of_paramenters(model: GptModel):
+  fake_total_params = sum(p.numel() for p in model.parameters())
+  print("fake_total_params", fake_total_params)
 
-class DummyLayerNorm(torch.nn.Module):
-  def __init__(
-    self, 
-    normalized_shape,
-    eps=1e-5
-  ):
-    super().__init__()
+  print("Token embedding layer shape:", model.token_embedding.weight.shape)
+  print("Output layer shape:", model.out_head.weight.shape)
 
-  def forward(self, x: Tensor):
-    return x
-  
+  honest_total_params = fake_total_params - sum(
+    p.numel() for p in model.out_head.parameters()
+  )
+
+  print("honest_total_params", honest_total_params)
+
+  numel_transformer_blocks = sum(
+    p.numel() 
+    for p in model.transformer_blocks.parameters()
+  )
+
+  numel_transformer_blocks2 = sum(
+    sum(
+      p.numel() 
+      for b in model.transformer_blocks
+      for p in getattr(b, name).parameters()
+    )
+    for name in ("attention", "ff", "norm1", "norm2", "drop_shortcut")
+  )
+
+  print("numel_transformer_blocks", numel_transformer_blocks)
+  print("numel_transformer_blocks2", numel_transformer_blocks2)

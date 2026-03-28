@@ -7,7 +7,7 @@ class CausalAttention(torch.nn.Module):
     d_in: int,
     d_out: int,
     context_length: int,
-    dropout: float,
+    drop_rate: float,
     bias=False
   ):
     super().__init__()
@@ -15,7 +15,7 @@ class CausalAttention(torch.nn.Module):
     self.W_query = torch.nn.Linear(d_in, d_out, bias)
     self.W_key = torch.nn.Linear(d_in, d_out, bias)
     self.W_value = torch.nn.Linear(d_in, d_out, bias)
-    self.dropout = torch.nn.Dropout(dropout)
+    self.dropout = torch.nn.Dropout(drop_rate)
     self.register_buffer(
       "mask",
       torch.triu(torch.ones(context_length, context_length), diagonal=1)
@@ -39,13 +39,13 @@ class CausalAttention(torch.nn.Module):
     return attention_weights @ values
 
 
-class MutliHeadAttention(torch.nn.Module):
+class MultiHeadAttention_v1(torch.nn.Module):
   def __init__(
     self, 
     d_in: int, 
     d_out: int,
     context_length: int,
-    dropout: float,
+    drop_rate: float,
     num_heads: int,
     bias = False
   ):
@@ -57,7 +57,7 @@ class MutliHeadAttention(torch.nn.Module):
           d_in,
           d_out,
           context_length,
-          dropout,
+          drop_rate,
           bias
         )
         for _ in range(num_heads)
@@ -73,13 +73,13 @@ class MutliHeadAttention(torch.nn.Module):
     )
 
 
-class MutliHeadAttention_v2(torch.nn.Module):
+class MultiHeadAttention(torch.nn.Module):
   def __init__(
     self, 
     d_in: int, 
     d_out: int,
     context_length: int,
-    dropout: float,
+    drop_rate: float,
     num_heads: int,
     bias = False
   ):
@@ -97,7 +97,7 @@ class MutliHeadAttention_v2(torch.nn.Module):
 
     self.out = torch.nn.Linear(d_out, d_out) # обучаемый слой для связы голов на выходе
 
-    self.dropout = torch.nn.Dropout(dropout)
+    self.dropout = torch.nn.Dropout(drop_rate)
     self.register_buffer(
       "mask",
       torch.triu(torch.ones(context_length, context_length), diagonal=1)
