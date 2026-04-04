@@ -1,9 +1,11 @@
+from typing import Optional
+
 import torch
 
 from tiktoken import Encoding
 from torch import Tensor, dtype
 from encoder import Encoder
-from gpt import GptModel
+from gpt_model import GptModel
 
 class GptModelAgent():
   def __init__(
@@ -19,8 +21,11 @@ class GptModelAgent():
   def send_message(
     self,
     message: str,
-    device: dtype,
-  ):
+    device: Optional[dtype] = None,
+    temperature = 1.4,
+    top_k = 25,
+
+  ) -> str:
     self.model.eval() # отключение обучения, отсева Dropout
 
     context_size = self.model.position_embedding.weight.shape[0]
@@ -30,39 +35,18 @@ class GptModelAgent():
       .to(device or self.device)
 
     with torch.no_grad():
-      token_ids = self.__gen_text_simple(
+      token_ids = self.model.generate(
         idx=encoded,
         max_new_tokens=50,
         context_size=context_size,
+        # temperature=temperature,
+        # top_k=top_k,
       )
 
-      decoded_text = self.encoder \
-        .token_ids_to_text(token_ids) \
-        .replace("\n", " ")
-      
-      print(
-        f"\n***\n"
-        f"Gpt Agent Response: {decoded_text}"
-        f"\n***\n" 
-      )
+      decoded_text = self.encoder.token_ids_to_text(token_ids)      
 
     self.model.train()
 
-  def __gen_text_simple(
-    self,
-    idx: Tensor,
-    max_new_tokens: int,
-    context_size: int
-  ):
-    for _ in range(max_new_tokens):
-      idx_cond = idx[:, -context_size:]
+    return decoded_text
 
-      with torch.no_grad():
-        logits = self.model(idx_cond)
-      
-      logits = logits[:, -1, :]
-      probas = torch.softmax(logits, dim=-1)
-      idx_next = torch.argmax(probas, dim=-1, keepdim=True)
-      idx = torch.concat((idx, idx_next), dim=-1)
-    
-    return idx
+  

@@ -1,9 +1,11 @@
+from matplotlib import pyplot as plt
 import tiktoken
 from cfg import GptModelConfig
 import torch
 import dl
+from encoder import Encoder
 from evaluator import ModelEvaluator
-from gpt import GptModel
+from gpt_model import GptModel
 from gpt_agent import GptModelAgent
 from ml import MachineLearning
 
@@ -89,6 +91,7 @@ torch.manual_seed(123)
 model = GptModel(GPT_CONFIG_124M)
 
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+# device = "cpu"
 model.to(device)
 
 optimAdamW = torch.optim.AdamW(
@@ -111,14 +114,22 @@ agent = GptModelAgent(
   device=device,
 )
 
-train_losses, \
-valid_losses, \
-tokens_seen = ml.train_model(
+def hanlde_epoch(device: torch.dtype):
+  answer = agent \
+    .send_message("Every effort moves you", device) \
+    .replace('\n', ' ')
+
+  print(
+    f"\n***\n"
+    f"Gpt Agent Response: {answer}"
+    f"\n***\n" 
+  ),
+
+train_losses, valid_losses, tokens_seen = ml.train_model(
   num_epochs=10,
   eval_freq=5,
   eval_num_batches=5,
-  on_epoch=lambda device: \
-    agent.send_message("Every effort moves you", device),
+  on_epoch=lambda device: hanlde_epoch(device),
   on_batch=lambda *args, **kwargs: \
     ModelEvaluator.show_losses(*args, **kwargs)
 )
@@ -128,3 +139,17 @@ ModelEvaluator.plot_losses(
   valid_losses=valid_losses,
   tokens_seen=tokens_seen
 )
+
+# model.eval()
+
+# agent = GptModelAgent(
+#   model=model,
+#   device=device,
+#   tokenizer=tokenizer
+# )
+# encoder = Encoder(tokenizer)
+
+# answer = agent.send_message("Every effort moves you")
+
+# print("Output text:\n", answer.replace('\n', ' '))
+

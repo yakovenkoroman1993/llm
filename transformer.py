@@ -3,7 +3,7 @@ import torch
 from torch import Tensor
 from causal_attention import MultiHeadAttention
 from gelu import FeedForward
-from gpt import GptModelConfig
+from gpt_model import GptModelConfig
 from norm import LinearNorm
 
 class Transformer(torch.nn.Module):
