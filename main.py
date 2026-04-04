@@ -1,3 +1,5 @@
+import os
+
 from matplotlib import pyplot as plt
 import tiktoken
 from cfg import GptModelConfig
@@ -8,9 +10,14 @@ from evaluator import ModelEvaluator
 from gpt_model import GptModel
 from gpt_agent import GptModelAgent
 from ml import MachineLearning
+from progress import GptModelProgress
 
 with open("the-verdict.txt", "r", encoding="utf-8") as f:
   raw_text = f.read()
+
+OUTPUT_FILENAME = "progress.pth"
+MODEL_STATE_DICT = "model_state_dict"
+OPTIM_STATE_DICT = "optim_state_dict"
 
 #### Токенизация
 tokenizer = tiktoken.get_encoding("gpt2")
@@ -88,10 +95,34 @@ valid_loader = dl.create(
 
 torch.manual_seed(123)
 
-model = GptModel(GPT_CONFIG_124M)
+def hanlde_epoch(device: torch.dtype):
+  answer = agent \
+    .send_message("Every effort moves you", device) \
+    .replace('\n', ' ')
+
+  print(
+    f"\n***\n"
+    f"Gpt Agent Response: {answer}"
+    f"\n***\n" 
+  ),
 
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 # device = "cpu"
+
+if os.path.exists(OUTPUT_FILENAME):
+  torch.serialization.add_safe_globals([GptModelProgress])
+  progress: GptModelProgress = torch.load(
+    OUTPUT_FILENAME,
+    map_location=device
+  )
+else:
+  progress = None  
+
+model = GptModel(GPT_CONFIG_124M)
+
+if progress is not None:
+  model.load_state_dict(progress.model_state_dict)
+
 model.to(device)
 
 optimAdamW = torch.optim.AdamW(
@@ -99,6 +130,9 @@ optimAdamW = torch.optim.AdamW(
   lr=0.0004,
   weight_decay=0.1,
 )
+
+if progress is not None:
+  optimAdamW.load_state_dict(progress.optim_state_dict)
 
 ml = MachineLearning(
   model=model,
@@ -114,17 +148,6 @@ agent = GptModelAgent(
   device=device,
 )
 
-def hanlde_epoch(device: torch.dtype):
-  answer = agent \
-    .send_message("Every effort moves you", device) \
-    .replace('\n', ' ')
-
-  print(
-    f"\n***\n"
-    f"Gpt Agent Response: {answer}"
-    f"\n***\n" 
-  ),
-
 train_losses, valid_losses, tokens_seen = ml.train_model(
   num_epochs=10,
   eval_freq=5,
@@ -134,11 +157,20 @@ train_losses, valid_losses, tokens_seen = ml.train_model(
     ModelEvaluator.show_losses(*args, **kwargs)
 )
 
+torch.save(
+  GptModelProgress(
+    model_state_dict=model.state_dict(),
+    optim_state_dict=optimAdamW.state_dict(),
+  ),
+  OUTPUT_FILENAME
+)
+
 ModelEvaluator.plot_losses(
   train_losses=train_losses,
   valid_losses=valid_losses,
   tokens_seen=tokens_seen
 )
+
 
 # model.eval()
 

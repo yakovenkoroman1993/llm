@@ -39,8 +39,8 @@ class GptModelAgent():
         idx=encoded,
         max_new_tokens=50,
         context_size=context_size,
-        # temperature=temperature,
-        # top_k=top_k,
+        temperature=temperature,
+        top_k=top_k,
       )
 
       decoded_text = self.encoder.token_ids_to_text(token_ids)      
