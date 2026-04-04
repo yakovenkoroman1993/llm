@@ -43,7 +43,7 @@ class SelfAttention_v1(torch.nn.Module):
     values = x @ self.W_value  # V
     attention_scores = queries @ keys.T
 
-    # масштабированние скалярного произведения чтобы избежать нулевых градиентов
+    # масштабированние скалярного произведения, чтобы избежать нулевых градиентов
     attention_weights = torch.softmax(attention_scores / keys.shape[-1]**0.5, dim=-1) 
     print("ATTENTION WEIGHTS", attention_weights)
     
@@ -65,7 +65,7 @@ class SelfAttention_v2(torch.nn.Module):
     values = self.W_value(x)  # V
     attention_scores = queries @ keys.T
 
-    # масштабированние скалярного произведения чтобы избежать нулевых градиентов
+    # масштабированние скалярного произведения, чтобы избежать нулевых градиентов
     attention_weights = torch.softmax(attention_scores / keys.shape[-1]**0.5, dim=-1) 
     print("ATTENTION WEIGHTS", attention_weights)
     
