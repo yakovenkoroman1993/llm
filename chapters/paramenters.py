@@ -1,5 +1,5 @@
   
-from gpt_model import GptModel
+from components.gpt_model import GptModel
 
 
 def print_num_of_paramenters(model: GptModel):

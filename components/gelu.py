@@ -1,6 +1,6 @@
 import torch
 from torch import Tensor
-from gpt_model import GptModelConfig
+from classes import GptModelConfig
 import matplotlib.pyplot as plt
 
 class ActivationsGraph():

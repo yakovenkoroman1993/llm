@@ -1,7 +1,7 @@
 from typing import Optional, Protocol
 
-from evaluator import ModelEvaluator
-from dl import DataLoader
+from components.evaluator import ModelEvaluator
+from components.dl import DataLoader
 from torch.optim.optimizer import Optimizer
 from torch.nn import Module
 from torch import dtype

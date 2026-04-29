@@ -1,2 +1,5 @@
 .vscode
 progress.pth
+.env
+*.ppt
+gpt2

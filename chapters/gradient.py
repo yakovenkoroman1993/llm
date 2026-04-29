@@ -2,7 +2,7 @@
 import torch
 
 from torch import Tensor
-from gelu import ExampleDeepNeuralNetwork
+from components.gelu import ExampleDeepNeuralNetwork
 
 def print_gradients(model: torch.nn.Module, x: Tensor):
   output = model(x)

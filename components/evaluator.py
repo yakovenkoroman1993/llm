@@ -7,7 +7,7 @@ from typing import Optional
 from matplotlib.ticker import MaxNLocator
 from torch.nn import Module
 from torch import Tensor, dtype
-from dl import DataLoader
+from components.dl import DataLoader
 
 class ModelEvaluator():
   def __init__(

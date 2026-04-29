@@ -2,9 +2,9 @@ import torch
 
 from typing import Optional
 from torch import Tensor
-from cfg import GptModelConfig
-from norm import LinearNorm
-from transformer import Transformer
+from classes import GptModelConfig
+from components.norm import LinearNorm
+from components.transformer import Transformer
 
 
 class GptModel(torch.nn.Module):

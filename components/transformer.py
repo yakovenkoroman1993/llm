@@ -1,10 +1,10 @@
 import torch
 
 from torch import Tensor
-from causal_attention import MultiHeadAttention
-from gelu import FeedForward
-from gpt_model import GptModelConfig
-from norm import LinearNorm
+from components.causal_attention import MultiHeadAttention
+from components.gelu import FeedForward
+from classes import GptModelConfig
+from components.norm import LinearNorm
 
 class Transformer(torch.nn.Module):
   def __init__(self, cfg: GptModelConfig):

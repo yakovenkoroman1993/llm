@@ -4,8 +4,8 @@ import torch
 
 from tiktoken import Encoding
 from torch import Tensor, dtype
-from encoder import Encoder
-from gpt_model import GptModel
+from components.encoder import Encoder
+from components.gpt_model import GptModel
 
 class GptModelAgent():
   def __init__(
