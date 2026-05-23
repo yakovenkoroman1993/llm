@@ -30,12 +30,12 @@ class ModelEvaluator():
     self.model.eval() # model.train(False) - выкл обучения, отключение отсева Dropout
 
     with torch.no_grad():
-      train_loss = self.__calc_loss_loader(
+      train_loss = self.calc_loss_loader(
         data_loader=self.train_loader,
         device=device or self.device,
         num_batches=num_batches
       )
-      valid_loss = self.__calc_loss_loader(
+      valid_loss = self.calc_loss_loader(
         data_loader=self.valid_loader,
         device=device or self.device,
         num_batches=num_batches
@@ -63,7 +63,7 @@ class ModelEvaluator():
 
     return loss
 
-  def __calc_loss_loader(
+  def calc_loss_loader(
     self,
     data_loader: DataLoader,
     device: dtype,
@@ -92,7 +92,7 @@ class ModelEvaluator():
 
     return total_loss / num_batches
   
-  staticmethod
+  @staticmethod
   def show_losses(
     epoch: int,
     step: int,
@@ -119,7 +119,7 @@ class ModelEvaluator():
   def plot_losses(
     train_losses: list[int],
     valid_losses: list[int],
-    tokens_seen: list[int],
+    amount_seen: list[int],
   ):
     epochs_seen = torch.linspace(0, 10, len(train_losses))
 
@@ -133,7 +133,7 @@ class ModelEvaluator():
     ax1.legend(loc="upper right")
     ax1.xaxis.set_major_locator(MaxNLocator(integer=True))
     ax2 = ax1.twiny()
-    ax2.plot(tokens_seen, train_losses, alpha=0)
+    ax2.plot(amount_seen, train_losses, alpha=0)
     ax2.set_xlabel("Tokens seen")
     fig.tight_layout()
     plt.show()

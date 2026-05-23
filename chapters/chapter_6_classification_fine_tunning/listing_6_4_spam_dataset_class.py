@@ -1,54 +1,20 @@
-import tiktoken
-import torch
 import pandas as pd
-
+import torch
+import tiktoken
+from typing import Optional
 from torch import Tensor
 from torch.utils.data import Dataset
-from typing import Iterator, Optional
-
-# Типизированный torch DataLoader
-class DataLoader(torch.utils.data.DataLoader[tuple[Tensor, Tensor]]):
-  def __iter__(self) -> Iterator[tuple[Tensor, Tensor]]:
-    return super().__iter__()
-
-# Токенизация и Реализация плавающего окна (входные данные - цель)
-class SlidingWindow(Dataset[tuple[Tensor, Tensor]]):
-  def __init__(
-      self, 
-      txt: str, 
-      tokenizer: tiktoken.Encoding, 
-      max_length: int, 
-      stride: int
-  ):
-    self.input_ids = []
-    self.target_ids = []
-
-    token_ids = tokenizer.encode(txt)
-
-    for i in range(0, len(token_ids) - max_length, stride):
-      input_chunk = token_ids[i: i + max_length]
-      self.input_ids.append(torch.tensor(input_chunk))
-
-      target_chunk = token_ids[i + 1: i + max_length + 1]
-      self.target_ids.append(torch.tensor(target_chunk))
-  
-  def __len__(self):
-    return len(self.input_ids)
-
-  def __getitem__(self, index: int) -> tuple[Tensor, Tensor]:
-    return self.input_ids[index], self.target_ids[index]
 
 tokenizer = tiktoken.get_encoding("gpt2")
-DEFAULT_PAD_TOKEN_ID = tokenizer.encode("<|endoftext|>",allowed_special={"<|endoftext|>"})[0]
+DEFAULT_PAD_TOKEN_ID = tokenizer.encode("<|endoftext|>",allowed_special={"<|endoftext|>"})
 
-# Dataset для обучения по классификации (1/0)
 class SpamDataset(Dataset):
   def __init__(
     self,
     csv_file: str,
     tokenizer: tiktoken.Encoding,
     max_length: Optional[int] = None,
-    pad_token_id=DEFAULT_PAD_TOKEN_ID
+    pad_token_id=DEFAULT_PAD_TOKEN_ID[0]
   ):
     self.data = pd.read_csv(csv_file)
 
@@ -92,3 +58,4 @@ class SpamDataset(Dataset):
         max_length = encoded_length
     
     return max_length
+  

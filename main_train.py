@@ -12,9 +12,12 @@ from components.ml import MachineLearning
 from classes import GptModelProgress
 from dataclasses import dataclass
 
+DEFAULT_LLM_SOURCE = "train_data/the-verdict.txt"
+DEFAULT_LLM_FILE = "progress.pth"
+
 def run(
-  llm_file: str,
-  llm_source: str = "the-verdict.txt"
+  llm_file = DEFAULT_LLM_FILE,
+  llm_source = DEFAULT_LLM_SOURCE
 ):
   with open(llm_source, "r", encoding="utf-8") as f:
     raw_text = f.read()
@@ -27,27 +30,35 @@ def run(
   valid_data = raw_text[split_position:]
 
   # Создаем итератор для пакетов с токенами: 1 пакет = 2 последовательности по 256 токена
-  train_loader = dl.create(
-    txt=train_data,
+  train_loader = dl.DataLoader(
+    dataset=dl.SlidingWindow(
+      txt=train_data,
+      tokenizer=tokenizer,
+      max_length=GPT_CONFIG_PROGRESS.context_length,
+      stride=GPT_CONFIG_PROGRESS.context_length,
+    ),
     batch_size=2,
-    max_length=GPT_CONFIG_PROGRESS.context_length,
-    stride=GPT_CONFIG_PROGRESS.context_length,
-    drop_last=True,
     shuffle=True,
+    drop_last=True,
+    num_workers=0,
   )
 
-  valid_loader = dl.create(
-    txt=valid_data,
+  valid_loader = dl.DataLoader(
+    dataset=dl.SlidingWindow(
+      txt=valid_data,
+      tokenizer=tokenizer,
+      max_length=GPT_CONFIG_PROGRESS.context_length,
+      stride=GPT_CONFIG_PROGRESS.context_length,
+    ),
     batch_size=2,
-    max_length=GPT_CONFIG_PROGRESS.context_length,
-    stride=GPT_CONFIG_PROGRESS.context_length,
-    drop_last=False,
     shuffle=False,
+    drop_last=False,
+    num_workers=0,
   )
 
-  torch.manual_seed(123)
+  # torch.manual_seed(123)
 
-  def hanlde_epoch(device: torch.dtype):
+  def handle_epoch(device: torch.dtype):
     answer = agent \
       .send_message("Every effort moves you", device) \
       .replace('\n', ' ')
@@ -93,6 +104,12 @@ def run(
     optimizer=optimAdamW,
     train_loader=train_loader,
     valid_loader=valid_loader,
+    evaluator=ModelEvaluator(
+      model=model,
+      train_loader=train_loader,
+      valid_loader=valid_loader,
+      device=device
+    )
   )
 
   agent = GptModelAgent(
@@ -105,7 +122,7 @@ def run(
     num_epochs=10,
     eval_freq=5,
     eval_num_batches=5,
-    on_epoch=lambda device: hanlde_epoch(device),
+    on_epoch=lambda device: handle_epoch(device),
     on_batch=lambda *args, **kwargs: \
       ModelEvaluator.show_losses(*args, **kwargs)
   )
@@ -121,14 +138,14 @@ def run(
   ModelEvaluator.plot_losses(
     train_losses=train_losses,
     valid_losses=valid_losses,
-    tokens_seen=tokens_seen
+    amount_seen=tokens_seen
   )
 
 if __name__ == "__main__":
   parser = argparse.ArgumentParser()
 
-  parser.add_argument("--llm-file", default="progress.pth")
-  parser.add_argument("--llm-source", default="the-verdict.txt")
+  parser.add_argument("--llm-file", default=DEFAULT_LLM_FILE)
+  parser.add_argument("--llm-source", default=DEFAULT_LLM_SOURCE)
 
   @dataclass
   class ArgsNamespace:

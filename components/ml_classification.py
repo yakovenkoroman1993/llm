@@ -1,43 +1,14 @@
 from typing import Optional, Protocol
-
-from components.evaluator import ModelEvaluator
-from components.dl import DataLoader
-from torch.optim.optimizer import Optimizer
-from torch.nn import Module
-from torch import dtype
-
-class OnBatchCallback(Protocol):
-  def __call__(
-    self, 
-    epoch: int, 
-    step: int,
-    train_loss: float,
-    valid_loss: float,
-  ) -> None: ...
+from components.ml import MachineLearning, OnBatchCallback
 
 class OnEpochCallback(Protocol):
   def __call__(
     self, 
-    device: Optional[dtype]
+    train_accuracy: float,
+    valid_accuracy: float
   ) -> None: ...
 
-class MachineLearning():
-  def __init__(
-    self,
-    model: Module,
-    train_loader: DataLoader, 
-    valid_loader: DataLoader, 
-    optimizer: Optimizer, 
-    device: dtype, 
-    evaluator: ModelEvaluator
-  ):
-    self.model = model
-    self.train_loader = train_loader
-    self.valid_loader = valid_loader
-    self.optimizer = optimizer
-    self.device = device
-    self.evaluator = evaluator
-
+class ClassificationMachineLearning(MachineLearning):
   def train_model(
     self,
     num_epochs: int,
@@ -46,11 +17,14 @@ class MachineLearning():
     on_epoch: Optional[OnEpochCallback] = None,
     on_batch: Optional[OnBatchCallback] = None
   ):
-    train_losses: list[int] = []
-    valid_losses: list[int] = []
-    track_tokens_seen: list[int] = []
+    train_losses: list[float] = []
+    valid_losses: list[float] = []
+    
+    examples_seen = 0
 
-    tokens_seen = 0
+    train_accs: list[float] = [] 
+    valid_accs: list[float] = []
+
     step = 0
 
     for epoch in range(num_epochs):
@@ -68,7 +42,7 @@ class MachineLearning():
 
         self.optimizer.step() # Сердце обучения: обновление весов модели в соответствие с градиентами потерь
 
-        tokens_seen += input_batch.numel()
+        examples_seen += input_batch.shape[0] # Отслеживает примеры вместо токенов
         
         # Необязательный шаг оценки 
         if step % eval_freq == 0:
@@ -76,7 +50,6 @@ class MachineLearning():
 
           train_losses.append(train_loss)
           valid_losses.append(valid_loss)
-          track_tokens_seen.append(tokens_seen)
 
           on_batch and on_batch(
             epoch=epoch,
@@ -87,7 +60,22 @@ class MachineLearning():
         
         step += 1
       
-      on_epoch and on_epoch(self.device)
+      train_accuracy = self.evaluator.calc_accuracy_loader(
+        data_loader=self.train_loader,
+        device=self.device,
+        num_batches=eval_num_batches,
+      )
+      
+      valid_accuracy = self.evaluator.calc_accuracy_loader(
+        data_loader=self.valid_loader,
+        device=self.device,
+        num_batches=eval_num_batches,
+      )
+
+      train_accs.append(train_accuracy)
+      valid_accs.append(valid_accuracy)
+
+      on_epoch and on_epoch(train_accuracy, valid_accuracy)
     
-    return train_losses, valid_losses, track_tokens_seen
+    return train_losses, valid_losses, train_accs, valid_accs, examples_seen
   

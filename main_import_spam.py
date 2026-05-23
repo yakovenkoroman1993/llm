@@ -5,15 +5,14 @@ import argparse
 from typeguard import typechecked
 from aliases import LLM_SIZES, LlmSize
 from cfg import GPT_MODEL_CONFIGS
-from components.gpt_model import GptModel
+from components.gpt_model_classification import ClassificationGptModel
+from import_gpt2.gpt_importer import GptImportOptions, load_weights_into_gpt
 from import_gpt2.gpt_download import load_gpt2
 from classes import GptModelProgress
 from dataclasses import dataclass
 
-from import_gpt2.gpt_importer import load_weights_into_gpt
-
 DEFAULT_MODEL_SIZE = "124M"
-DEFAULT_LLM_FILE = "gpt2_124m.pth"
+DEFAULT_LLM_FILE = "gpt2_124m_spam.pth"
 
 @typechecked
 def run(
@@ -22,7 +21,7 @@ def run(
 ):
   gpt_cfg = GPT_MODEL_CONFIGS[llm_size]
   print(gpt_cfg)
-  gpt = GptModel(gpt_cfg)
+  gpt = ClassificationGptModel(gpt_cfg)
 
   gpt.eval()
 
@@ -33,7 +32,13 @@ def run(
     base_dir=os.path.dirname(os.path.abspath(__file__))
   )
 
-  load_weights_into_gpt(gpt, params)
+  load_weights_into_gpt(
+    gpt, 
+    params, 
+    options=GptImportOptions(
+      excluded_layers=["out_head"]
+    )
+  )
 
   torch.save(
     GptModelProgress(
